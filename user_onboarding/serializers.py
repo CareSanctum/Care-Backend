@@ -53,3 +53,29 @@ class LifestyleDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = LifestyleDetails
         fields = '__all__'
+
+class VitalSignsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VitalSigns
+        fields = ['heart_rate', 'blood_pressure', 'respiratory_rate', 'temperature', 'checked_at']
+
+class HealthMetricsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HealthMetrics
+        fields = ['blood_sugar', 'ecg', 'bmi', 'sleep_level', 'stress_level', 'blood_oxygen', 'checked_at']
+
+class CheckupScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckupSchedule
+        fields = ['scheduled_date', 'status']
+
+class HealthStatusOverviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HealthStatusOverview
+        fields = ['status_message', 'next_checkup_date']
+
+class PatientHealthDataSerializer(serializers.Serializer):
+    vital_signs = VitalSignsSerializer(required=False)
+    health_metrics = HealthMetricsSerializer(required=False)
+    checkup_schedule = CheckupScheduleSerializer(required=False)
+    health_status_overview = HealthStatusOverviewSerializer(required=False)

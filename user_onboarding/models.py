@@ -11,6 +11,8 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
     def create_superuser(self, phone_number, email=None, password=None):
+        if email==None:
+            email = phone_number+"@gmail.com"
         user = self.create_user(phone_number, email, password, role="ADMIN")
         user.is_staff = True
         user.is_superuser = True
@@ -97,3 +99,36 @@ class LifestyleDetails(models.Model):
     requires_mobility_assistance = models.BooleanField(default=False)
     has_vision_impairment = models.BooleanField(default=False)
     has_hearing_impairment = models.BooleanField(default=False)
+
+
+# New VitalSigns Model
+class VitalSigns(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='vital_signs')
+    heart_rate = models.IntegerField()  # BPM
+    blood_pressure = models.CharField(max_length=10)  # Example: 120/80 mmHg
+    respiratory_rate = models.IntegerField()  # BPM
+    temperature = models.FloatField()  # Celsius
+    checked_at = models.DateTimeField(auto_now_add=True)
+
+# New HealthMetrics Model
+class HealthMetrics(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='health_metrics')
+    blood_sugar = models.IntegerField(help_text='mg/dL')
+    ecg = models.CharField(max_length=20, choices=[('Normal', 'Normal'), ('Abnormal', 'Abnormal')])
+    bmi = models.FloatField()
+    sleep_level = models.FloatField(help_text='Hours')
+    stress_level = models.CharField(max_length=20, choices=[('Low', 'Low'), ('Moderate', 'Moderate'), ('High', 'High')])
+    blood_oxygen = models.IntegerField(help_text='Percentage')
+    checked_at = models.DateTimeField(auto_now_add=True)
+
+# New CheckupSchedule Model
+class CheckupSchedule(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='checkup_schedule')
+    scheduled_date = models.DateField()
+    status = models.CharField(max_length=20, choices=[('Scheduled', 'Scheduled'), ('Completed', 'Completed'), ('Missed', 'Missed')])
+
+# New HealthStatusOverview Model
+class HealthStatusOverview(models.Model):
+    patient = models.OneToOneField(Patient, on_delete=models.CASCADE, related_name='health_status_overview')
+    status_message = models.CharField(max_length=255, default='Your health metrics are within normal range')
+    next_checkup_date = models.DateField()
