@@ -58,7 +58,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'care_app.wsgi.application'
 CORS_ALLOW_ALL_ORIGINS = False  # Set to True to allow all, not recommended for production
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",  # Your React frontend
+    "http://localhost:8081",  # Your React frontend
+    "http://localhost:8080"
 ]
 CORS_ALLOW_CREDENTIALS = True
 

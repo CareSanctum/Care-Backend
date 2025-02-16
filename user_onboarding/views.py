@@ -149,7 +149,7 @@ class FileUploadAPIView(APIView):
             folder = f"patients/{user_name}"
             model_name = "Patient"
         elif model == MedicalHistory:
-            instance = get_object_or_404(MedicalHistory, user_id=user_name)  # Fetch medical history for the patient
+            instance = get_object_or_404(MedicalHistory, patient__user__username=user_name)  # Fetch medical history for the patient
             folder = f"medical_history/{user_name}"
             model_name = "MedicalHistory"
         # Define correct field
