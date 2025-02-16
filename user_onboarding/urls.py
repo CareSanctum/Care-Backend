@@ -6,4 +6,6 @@ urlpatterns = [
     path("add_patient_data/", CreateOrUpdatePatientData.as_view(), name="add_patient_data"),
     path("user-details/<str:username>/", UserDetailsView.as_view(), name="user-details"),
      path("upload-file/", FileUploadAPIView.as_view(), name="upload-file"),
+     path('health-data/<str:username>', get_patient_health_data, name='get_patient_health_data'),
+    path('health-data/update/<str:username>', create_or_update_health_data, name='create_or_update_health_data'),
 ]

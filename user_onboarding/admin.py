@@ -6,7 +6,11 @@ from .models import (
     EmergencyContacts,
     MedicalHistory,
     PreferredMedicalServices,
-    LifestyleDetails
+    LifestyleDetails,
+    VitalSigns,
+    HealthMetrics,
+    CheckupSchedule,
+    HealthStatusOverview
 )
 
 # Custom User Admin
@@ -57,6 +61,30 @@ class LifestyleDetailsAdmin(admin.ModelAdmin):
     search_fields = ("patient__user__username", "diet_preferences")
     list_filter = ("activity_level", "requires_mobility_assistance", "has_vision_impairment", "has_hearing_impairment")
 
+# Vital Signs Admin
+class VitalSignsAdmin(admin.ModelAdmin):
+    list_display = ("id", "patient", "heart_rate", "blood_pressure", "respiratory_rate", "temperature", "checked_at")
+    search_fields = ("patient__user__username",)
+    list_filter = ("checked_at",)
+
+# Health Metrics Admin
+class HealthMetricsAdmin(admin.ModelAdmin):
+    list_display = ("id", "patient", "blood_sugar", "ecg", "bmi", "sleep_level", "stress_level", "blood_oxygen", "checked_at")
+    search_fields = ("patient__user__username",)
+    list_filter = ("checked_at", "stress_level", "ecg")
+
+# Checkup Schedule Admin
+class CheckupScheduleAdmin(admin.ModelAdmin):
+    list_display = ("id", "patient", "scheduled_date", "status")
+    search_fields = ("patient__user__username",)
+    list_filter = ("status", "scheduled_date")
+
+# Health Status Overview Admin
+class HealthStatusOverviewAdmin(admin.ModelAdmin):
+    list_display = ("id", "patient", "status_message", "next_checkup_date")
+    search_fields = ("patient__user__username", "status_message")
+    list_filter = ("next_checkup_date",)
+
 # Registering all models
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Patient, PatientAdmin)
@@ -64,3 +92,7 @@ admin.site.register(EmergencyContacts, EmergencyContactAdmin)
 admin.site.register(MedicalHistory, MedicalHistoryAdmin)
 admin.site.register(PreferredMedicalServices, PreferredMedicalServicesAdmin)
 admin.site.register(LifestyleDetails, LifestyleDetailsAdmin)
+admin.site.register(VitalSigns, VitalSignsAdmin)
+admin.site.register(HealthMetrics, HealthMetricsAdmin)
+admin.site.register(CheckupSchedule, CheckupScheduleAdmin)
+admin.site.register(HealthStatusOverview, HealthStatusOverviewAdmin)

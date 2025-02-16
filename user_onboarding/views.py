@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from .models import *
 from .serializers import *
@@ -11,6 +12,7 @@ from care_app import settings
 from rest_framework.parsers import MultiPartParser
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view
 # Initialize S3 client using Django settings
 s3 = boto3.client(
     "s3",
@@ -197,3 +199,73 @@ class UserDetailsView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_patient_health_data(request, username):
+    try:
+        # Fetch patient linked to user_id
+        patient = Patient.objects.get(user__username=username)
+        
+        # Get the latest records for each model
+        vital_signs = VitalSigns.objects.filter(patient=patient).order_by('-checked_at').first()
+        health_metrics = HealthMetrics.objects.filter(patient=patient).order_by('-checked_at').first()
+        checkup_schedule = CheckupSchedule.objects.filter(patient=patient).order_by('-scheduled_date').first()
+        health_status = HealthStatusOverview.objects.filter(patient=patient).first()
+
+        # Prepare response JSON
+        data = {
+            "user_id": username,
+            "vital_signs": VitalSignsSerializer(vital_signs).data if vital_signs else None,
+            "health_metrics": HealthMetricsSerializer(health_metrics).data if health_metrics else None,
+            "checkup_schedule": CheckupScheduleSerializer(checkup_schedule).data if checkup_schedule else None,
+            "health_status_overview": HealthStatusOverviewSerializer(health_status).data if health_status else None,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    except Patient.DoesNotExist:
+        return Response({"error": "Patient not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+def create_or_update_health_data(request, username):
+    try:
+        patient = Patient.objects.get(user__username=username)
+    except Patient.DoesNotExist:
+        return Response({"error": "Patient not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = PatientHealthDataSerializer(data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        with transaction.atomic():  # Ensure atomicity
+            validated_data = serializer.validated_data
+
+            # Update only provided fields
+            if "vital_signs" in validated_data:
+                VitalSigns.objects.update_or_create(
+                    patient=patient,
+                    defaults=validated_data["vital_signs"]
+                )
+
+            if "health_metrics" in validated_data:
+                HealthMetrics.objects.update_or_create(
+                    patient=patient,
+                    defaults=validated_data["health_metrics"]
+                )
+
+            if "checkup_schedule" in validated_data:
+                CheckupSchedule.objects.update_or_create(
+                    patient=patient,
+                    defaults=validated_data["checkup_schedule"]
+                )
+
+            if "health_status_overview" in validated_data:
+                HealthStatusOverview.objects.update_or_create(
+                    patient=patient,
+                    defaults=validated_data["health_status_overview"]
+                )
+
+        return Response({"message": "Health data updated successfully"}, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
