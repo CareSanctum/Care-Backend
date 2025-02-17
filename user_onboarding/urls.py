@@ -8,4 +8,5 @@ urlpatterns = [
      path("upload-file/", FileUploadAPIView.as_view(), name="upload-file"),
      path('health-data/<str:username>', get_patient_health_data, name='get_patient_health_data'),
     path('health-data/update/<str:username>', create_or_update_health_data, name='create_or_update_health_data'),
+    path('patient-usernames/', PatientUsernamesListView.as_view(), name='patient-usernames-list'),
 ]
