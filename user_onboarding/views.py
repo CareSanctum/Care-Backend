@@ -269,3 +269,8 @@ def create_or_update_health_data(request, username):
         return Response({"message": "Health data updated successfully"}, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PatientUsernamesListView(APIView):
+    def get(self, request):
+        usernames = Patient.objects.values_list("user__username", flat=True)  # Fetch only usernames
+        return Response({"usernames": list(usernames)})
