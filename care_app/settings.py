@@ -27,7 +27,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "user_onboarding",
-    "corsheaders"
+    "corsheaders",
+    "whitenoise.runserver_nostatic"
 ]
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Add this line at the top
@@ -38,7 +39,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware"
 ]
+
+                           
 ROOT_URLCONF = 'care_app.urls'
 TEMPLATES = [
     {
@@ -56,12 +60,14 @@ TEMPLATES = [
     },
 ]
 WSGI_APPLICATION = 'care_app.wsgi.application'
-CORS_ALLOW_ALL_ORIGINS = False  # Set to True to allow all, not recommended for production
+CORS_ALLOW_ALL_ORIGINS = True  # Set to True to allow all, not recommended for production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8081",  # Your React frontend
     "http://localhost:8080",
-    "http://localhost:8082"
+    "http://localhost:8082",
+    "https://jocular-moonbeam-bc725b.netlify.app/signin"
 ]
+CORS_ALLOW_HEADERS = ["Authorization", "Content-Type"]
 CORS_ALLOW_CREDENTIALS = True
 
 import os 
@@ -73,6 +79,8 @@ AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
 
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
