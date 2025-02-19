@@ -65,7 +65,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8081",  # Your React frontend
     "http://localhost:8080",
     "http://localhost:8082",
-    "https://jocular-moonbeam-bc725b.netlify.app/signin"
+    "https://jocular-moonbeam-bc725b.netlify.app"
 ]
 CORS_ALLOW_HEADERS = ["Authorization", "Content-Type"]
 CORS_ALLOW_CREDENTIALS = True
