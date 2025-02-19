@@ -59,7 +59,8 @@ WSGI_APPLICATION = 'care_app.wsgi.application'
 CORS_ALLOW_ALL_ORIGINS = False  # Set to True to allow all, not recommended for production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8081",  # Your React frontend
-    "http://localhost:8080"
+    "http://localhost:8080",
+    "http://localhost:8082"
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -100,7 +101,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
+USE_TZ = True
 USE_I18N = True
 USE_TZ = True
 # Static files (CSS, JavaScript, Images)

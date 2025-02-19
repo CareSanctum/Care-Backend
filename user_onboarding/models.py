@@ -108,7 +108,7 @@ class VitalSigns(models.Model):
     blood_pressure = models.CharField(max_length=10)  # Example: 120/80 mmHg
     respiratory_rate = models.IntegerField()  # BPM
     temperature = models.FloatField()  # Celsius
-    checked_at = models.DateTimeField(auto_now_add=True)
+    checked_at = models.DateTimeField(auto_now=True)
 
 # New HealthMetrics Model
 class HealthMetrics(models.Model):
@@ -119,7 +119,7 @@ class HealthMetrics(models.Model):
     sleep_level = models.FloatField(help_text='Hours')
     stress_level = models.CharField(max_length=20, choices=[('Low', 'Low'), ('Moderate', 'Moderate'), ('High', 'High')])
     blood_oxygen = models.IntegerField(help_text='Percentage')
-    checked_at = models.DateTimeField(auto_now_add=True)
+    checked_at = models.DateTimeField(auto_now=True)
 
 # New CheckupSchedule Model
 class CheckupSchedule(models.Model):
