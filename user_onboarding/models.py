@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group
 from django.db import models
 import uuid
+from django.utils.timezone import now
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, phone_number, email=None, password=None, role="USERS"):
         if not phone_number:
@@ -44,21 +46,24 @@ class Patient(models.Model):
         ('AB+', 'AB+'), ('AB-', 'AB-'), ('O+', 'O+'), ('O-', 'O-'),
     ]
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="patient_profile")
-    dob = models.DateField(verbose_name="Date of Birth")
+    care_manager = models.OneToOneField(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_patient", limit_choices_to={'role': 'CARE_MANAGER'})
+    admin = models.OneToOneField(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="admin_patient", limit_choices_to={'role': 'ADMIN'})
+    kin = models.OneToOneField(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="kin_patient", limit_choices_to={'role': 'USER_KIN'})
+    dob = models.DateField(verbose_name="Date of Birth",null = True, blank=True)
     full_name = models.CharField(max_length=100, null=True, blank=True)
-    gender = models.CharField(max_length=10, choices=[("Male", "Male"), ("Female", "Female"), ("Other", "Other")])
-    address = models.TextField(verbose_name="Address")
-    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES)
-    height = models.CharField(max_length=10)
-    weight = models.CharField(max_length=10)
+    gender = models.CharField(max_length=10, choices=[("Male", "Male"), ("Female", "Female"), ("Other", "Other")], null = True, blank=True)
+    address = models.TextField(verbose_name="Address", null = True, blank=True)
+    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES, null = True, blank=True)
+    height = models.CharField(max_length=10, null = True, blank=True)
+    weight = models.CharField(max_length=10, null = True, blank=True)
     id_proof_url = models.CharField(max_length=500, null=True, blank=True)
     profile_picture_url = models.CharField(max_length=500, null=True, blank=True)
-    usual_wake_up_time = models.TimeField()
-    current_location_status = models.CharField(max_length=50, choices=[('AtHome', 'At Home'), ('Travelling', 'Travelling')])
+    usual_wake_up_time = models.TimeField(null = True, blank=True)
+    current_location_status = models.CharField(max_length=50, null = True, blank=True, choices=[('AtHome', 'At Home'), ('Travelling', 'Travelling')])
     expected_return_date = models.DateField(null=True, blank=True)
-    phone = models.CharField(max_length=15, blank=True)
-    alternate_phone = models.CharField(max_length=15, blank=True)
-    pin_code = models.CharField(max_length=15, blank=True)
+    phone = models.CharField(max_length=15, blank=True, null = True)
+    alternate_phone = models.CharField(max_length=15, blank=True, null = True)
+    pin_code = models.CharField(max_length=15, blank=True, null = True)
     def __str__(self):
         return f"Patient Profile of {self.user.username}"
 class EmergencyContacts(models.Model):
@@ -132,3 +137,113 @@ class HealthStatusOverview(models.Model):
     patient = models.OneToOneField(Patient, on_delete=models.CASCADE, related_name='health_status_overview')
     status_message = models.CharField(max_length=255, default='Your health metrics are within normal range')
     next_checkup_date = models.DateField()
+
+
+class Ticket(models.Model):
+    STATUS_CHOICES = [
+        ("OPEN", "Open"),
+        ("CLOSED", "Closed"),
+    ]
+
+    REMARK_CHOICES = [
+        ("ESCALATED_TO_ADMIN", "Escalated to Admin"),
+        ("ESCALATED_TO_CARE_TEAM", "Escalated to Care Team"),
+        ("ESCALATED_TO_KIN", "Escalated to Kin"),
+    ]
+
+    ticket_number = models.CharField(max_length=100, unique=True, editable=False)
+    user_initiated = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="initiated_tickets")
+    user_assigned = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_tickets")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    remark = models.CharField(max_length=50, choices=REMARK_CHOICES, null=True, blank=True)
+    description = models.TextField()
+    date_initiated = models.DateTimeField(default=now)
+    date_closed = models.DateTimeField(null=True, blank=True)
+    service_name = models.CharField(max_length=100)
+    current_work = models.CharField(max_length=200)
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_number:
+            unique_id = uuid.uuid4().hex[:6].upper()
+            self.ticket_number = f"{self.user_initiated.username}_{unique_id}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Ticket {self.ticket_number} - {self.status}"
+
+
+
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class ScheduledVisit(models.Model):
+    VISIT_TYPES = [
+        ('care_manager', 'Care Manager'),
+        ('buddy', 'Buddy'),
+        ('doctor', 'Doctor'),
+    ]
+
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('rescheduled', 'Rescheduled'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='scheduled_visits')
+    visit_type = models.CharField(max_length=20, choices=VISIT_TYPES)
+    scheduled_datetime = models.DateTimeField(default=now,null = True)
+    gmeet_link = models.CharField(max_length=500, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="scheduled")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.visit_type} visit for {self.patient.user.username} on {self.scheduled_datetime}"
+
+
+
+class CommunityEvent(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    date = models.DateTimeField()
+    location = models.CharField(max_length=255, blank=True, null=True)
+    registered_users = models.ManyToManyField(CustomUser, related_name="community_events", blank=True)
+    total_registered = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        """Save the event first before updating total_registered"""
+        is_new = self.pk is None  # Check if it's a new event
+        super().save(*args, **kwargs)  # Save the instance first
+
+        if not is_new:  # Only update if it's an existing object
+            self.total_registered = self.registered_users.count()
+            super().save(update_fields=["total_registered"])
+
+    def __str__(self):
+        return self.name
+
+
+class CurrentMedication(models.Model):
+    STATUS_CHOICES = [
+        ("current", "Current"),
+        ("completed", "Completed"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="medications")
+    medicine_name = models.CharField(max_length=255)
+    dosage = models.CharField(max_length=100)  # Example: "1 tablet"
+    timing = models.CharField(max_length=100)  # Example: "After Breakfast"
+    prescribed_by = models.CharField(max_length=255)  # Doctor's name
+    expiry_date = models.DateField()
+    stock_remaining = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="current")
+
+    def is_expired(self):
+        """Check if the medicine is expired."""
+        return self.expiry_date < now().date()
+
+    def __str__(self):
+        return f"{self.medicine_name} - {self.user.username}"

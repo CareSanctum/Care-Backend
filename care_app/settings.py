@@ -59,6 +59,19 @@ TEMPLATES = [
         },
     },
 ]
+
+import os 
+from dotenv import load_dotenv
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.sendgrid.net"
+EMAIL_PORT = os.getenv("EMAIL_PORT")
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "apikey"  # This is the fixed value for SendGrid
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")  # Replace with your API Key
+DEFAULT_FROM_EMAIL = "sairamp@caresanctum.com"
+
+
 WSGI_APPLICATION = 'care_app.wsgi.application'
 CORS_ALLOW_ALL_ORIGINS = True  # Set to True to allow all, not recommended for production
 CORS_ALLOWED_ORIGINS = [

@@ -1,17 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import (
-    CustomUser,
-    Patient,
-    EmergencyContacts,
-    MedicalHistory,
-    PreferredMedicalServices,
-    LifestyleDetails,
-    VitalSigns,
-    HealthMetrics,
-    CheckupSchedule,
-    HealthStatusOverview
-)
+from .models import *
 
 # Custom User Admin
 class CustomUserAdmin(UserAdmin):
@@ -85,9 +74,39 @@ class HealthStatusOverviewAdmin(admin.ModelAdmin):
     search_fields = ("patient__user__username", "status_message")
     list_filter = ("next_checkup_date",)
 
+class TicketAdmin(admin.ModelAdmin):
+    list_display = ("ticket_number", "user_initiated", "user_assigned", "status", "service_name", "date_initiated", "date_closed")
+    list_filter = ("status", "service_name", "date_initiated")
+    search_fields = ("ticket_number", "user_initiated__username", "user_assigned__username", "service_name")
+    readonly_fields = ("ticket_number", "date_initiated", "date_closed")
+
+    def save_model(self, request, obj, form, change):
+        if not obj.ticket_number:
+            obj.save()  # Ensure the ticket_number gets generated before saving
+        super().save_model(request, obj, form, change)
+
+class ScheduledVisitAdmin(admin.ModelAdmin):
+    list_display = ("id", "patient", "visit_type", "status")
+    list_filter = ("visit_type", "status")
+    search_fields = ("patient__username", "visit_type")
+
+class CommunityEventAdmin(admin.ModelAdmin):
+    list_display = ("name", "date", "total_registered")
+    search_fields = ("name",)
+    ordering = ("date",)
+
+class CurrentMedicationAdmin(admin.ModelAdmin):
+    list_display = ("medicine_name", "user", "dosage", "timing", "prescribed_by", "expiry_date", "stock_remaining", "status")
+    search_fields = ("medicine_name", "user__username", "prescribed_by")
+    list_filter = ("status", "expiry_date")
+
 # Registering all models
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Patient, PatientAdmin)
+admin.site.register(CurrentMedication, CurrentMedicationAdmin)
+admin.site.register(ScheduledVisit, ScheduledVisitAdmin)
+admin.site.register(CommunityEvent, CommunityEventAdmin)
+admin.site.register(Ticket, TicketAdmin)
 admin.site.register(EmergencyContacts, EmergencyContactAdmin)
 admin.site.register(MedicalHistory, MedicalHistoryAdmin)
 admin.site.register(PreferredMedicalServices, PreferredMedicalServicesAdmin)

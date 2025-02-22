@@ -8,7 +8,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, min_length=6) #added a confirm password field while registration
     class Meta:
         model = CustomUser
-        fields = ["email", "phone_number", "password", "confirm_password"]
+        fields = ["email", "phone_number", "password", "confirm_password","role"]
         extra_kwargs = {
             "password": {"write_only": True, "min_length": 6},
         }
@@ -79,3 +79,45 @@ class PatientHealthDataSerializer(serializers.Serializer):
     health_metrics = HealthMetricsSerializer(required=False)
     checkup_schedule = CheckupScheduleSerializer(required=False)
     health_status_overview = HealthStatusOverviewSerializer(required=False)
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    user_initiated = serializers.SerializerMethodField()
+    user_assigned = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Ticket
+        fields = "__all__"  # This ensures ALL fields from the model are included in the response
+
+    def get_user_initiated(self, obj):
+        return {
+            "id": obj.user_initiated.id,
+            "username": obj.user_initiated.username,
+            "email": obj.user_initiated.email
+        } if obj.user_initiated else None
+
+    def get_user_assigned(self, obj):
+        return {
+            "id": obj.user_assigned.id,
+            "username": obj.user_assigned.username,
+            "email": obj.user_assigned.email
+        } if obj.user_assigned else None
+
+class ScheduledVisitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduledVisit
+        fields = "__all__"
+
+
+
+class CommunityEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommunityEvent
+        fields = ["id", "name", "description", "date", "total_registered", "location"]
+
+
+class CurrentMedicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CurrentMedication
+        fields = ["id", "user", "medicine_name", "dosage", "timing", "prescribed_by", "expiry_date", "stock_remaining", "status"]
+
