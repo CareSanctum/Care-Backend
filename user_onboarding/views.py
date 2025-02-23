@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 import requests
+import uuid
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from .models import *
@@ -16,6 +17,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from django.utils.timezone import now
 from django.core.mail import send_mail
+
 # Initialize S3 client using Django settings
 s3 = boto3.client(
     "s3",
@@ -153,48 +155,88 @@ ALLOWED_FIELDS = {
     "MedicalHistory": {
         "current_prescriptions": "current_prescriptions_url",
     },
+    "LabReport": {
+        "LR_file": "LR_file_url",
+    },
+    "Prescription": {
+        "Presc_file": "Presc_file_url",
+    }
 }
+
 
 class FileUploadAPIView(APIView):
     parser_classes = [MultiPartParser]
     def post(self, request, *args, **kwargs):
         file = request.FILES.get("file")
-        field_name = request.data.get("name")  # e.g., "id_proof" or "current_prescriptions"
-        user_name = request.data.get("user_name")  # Required for both models
-        if not file or not field_name or not user_name:
-            return Response({"error": "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)
+        field_name = request.data.get("name")  # Optional
+        user_name = request.data.get("user_name")  # Optional
+        test_name = request.data.get("test_name")  # Optional
+        doctor_name = request.data.get("doctor_name")  # Optional
+        prescribed_date = request.data.get("prescribed_date")  # Optional
+        test_date = request.data.get("test_date")  # Optional
+
+        if not file:
+            return Response({"error": "File is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
         # Determine target model
         model = None
-        if field_name in ALLOWED_FIELDS["Patient"]:
-            model = Patient
-        elif field_name in ALLOWED_FIELDS["MedicalHistory"]:
-            model = MedicalHistory
-        else:
-            return Response({"error": "Invalid field name"}, status=status.HTTP_400_BAD_REQUEST)
-        # Get the correct instance (Patient or MedicalHistory)
         instance = None
-        if model == Patient:
-            instance = get_object_or_404(Patient, user__username=user_name)
+        folder = "uploads"  # Default folder if no specific user is given
+        model_name = None
+
+        # Determine target model
+        if field_name in ALLOWED_FIELDS["Patient"] and user_name:
+            model = Patient
+            instance = Patient.objects.filter(user__username=user_name).first()
             folder = f"patients/{user_name}"
             model_name = "Patient"
-        elif model == MedicalHistory:
-            instance = get_object_or_404(MedicalHistory, patient__user__username=user_name)  # Fetch medical history for the patient
+        elif field_name in ALLOWED_FIELDS["MedicalHistory"] and user_name:
+            model = MedicalHistory
+            instance = MedicalHistory.objects.filter(patient__user__username=user_name).first()
             folder = f"medical_history/{user_name}"
             model_name = "MedicalHistory"
+        elif field_name in ALLOWED_FIELDS["LabReport"]:
+            model = LabReport
+            instance, _ = LabReport.objects.get_or_create(
+                user__username=user_name if user_name else None,
+                test_name=test_name if test_name else "",
+                test_date=test_date if test_date else None
+            )
+            folder = f"lab_reports/{user_name if user_name else 'general'}"
+            model_name = "LabReport"
+        elif field_name in ALLOWED_FIELDS["Prescription"]:
+            model = Prescription
+            instance, _ = Prescription.objects.get_or_create(
+                user__username=user_name if user_name else None,
+                doctor_name=doctor_name if doctor_name else "",
+                prescribed_date=prescribed_date if prescribed_date else None
+            )
+            folder = f"prescriptions/{user_name if user_name else 'general'}"
+            model_name = "Prescription"
+        else:
+            return Response({"error": "Invalid field name or missing user_name"}, status=status.HTTP_400_BAD_REQUEST)
+
         # Define correct field
         field_to_update = ALLOWED_FIELDS[model_name].get(field_name)
         if not field_to_update:
             return Response({"error": "Invalid field mapping"}, status=status.HTTP_400_BAD_REQUEST)
+
         # Define file path in S3
         s3_path = f"{folder}/{field_name}/{file.name}"
+
         try:
             # Upload file to S3
-            s3.upload_fileobj(file, BUCKET_NAME, s3_path, ExtraArgs={'ACL': 'public-read'})
+            s3.upload_fileobj(file, BUCKET_NAME, s3_path, ExtraArgs={"ACL": "public-read"})
+
             # Generate public file URL
             file_url = f"https://{BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{s3_path}"
-            # Update the model field with the S3 URL
-            setattr(instance, field_to_update, file_url)
-            instance.save()
+
+            # Update the model field with the S3 URL if instance exists
+            if instance:
+                setattr(instance, field_to_update, file_url)
+                instance.save()
+
             return Response({"message": "File uploaded successfully", "file_url": file_url}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -379,13 +421,37 @@ class CreateTicketForCareManagerView(generics.CreateAPIView):
         return Response(result, status=status.HTTP_201_CREATED)
     
 def send_email(subject, message, recipient_emails):
-    send_mail(
-        subject,
-        message,
-        "sairamp@caresanctum.com",  # Must be a verified sender email
-        recipient_emails,
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            message,
+            "sairamp@caresanctum.com",  # Must be a verified sender email
+            recipient_emails,
+            fail_silently=False,
+        )
+        print(f"Email sent to {recipient_emails}")
+    except Exception as e:
+        print(f"Error sending email: {str(e)}") 
+
+@api_view(["POST"])
+def contact_CM(request):
+    username = request.data.get("username")
+
+    if not username:
+        return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = get_object_or_404(CustomUser, username=username)
+
+    # Get the patient's assigned care manager
+    patient = get_object_or_404(Patient, user=user)
+    care_manager = patient.care_manager
+
+    if not care_manager:
+        return Response({"error": "No care manager assigned to the user"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    send_email(f"{username} intiated service request for",f"{username} intiated service request for ",[care_manager.email])
+    print ("request received")
+    return Response({"message": "Mail Sent to Care Manager"}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -419,9 +485,8 @@ class ScheduleVisitAPIView(APIView):
     def post(self, request):
         username = request.data.get("username")
         visit_type = request.data.get("visit_type")
-        acess_token = get_zoom_access_token()
         scheduled_datetime = request.data.get("scheduled_datetime", None)
-        gmeet_link = create_zoom_meeting(acess_token)
+        gmeet_link = generate_meeting_link()
         status_val = request.data.get("status", "scheduled")
 
         patient = get_object_or_404(Patient, user__username=username)
@@ -459,50 +524,20 @@ class GetPatientSchedulesAPIView(APIView):
         return Response(serializer.data)
 
 
-CLIENT_ID = "8it80gwjQRO8xHh5wwznyg"
-CLIENT_SECRET = "u24seLpQjjSO2Ztx51bayltbCnY0u93R"
-ACCOUNT_ID = "YdqyF8EdT3WmfgW7sk35qQ"
+JITSI_SERVER_URL = "https://meet.jit.si"
 
-def get_zoom_access_token():
-    url = "https://zoom.us/oauth/token"
-    headers = {"Authorization": f"Basic {CLIENT_ID}:{CLIENT_SECRET}"}
-    payload = {
-        "grant_type": "account_credentials",
-        "account_id": ACCOUNT_ID
-    }
+def generate_meeting_link():
+    """Generates a unique Jitsi Meet link."""
+    meeting_id = str(uuid.uuid4())  # Generate a unique identifier
+    meeting_link = f"{JITSI_SERVER_URL}/{meeting_id}"
+    return meeting_link
 
-    response = requests.post(url, headers=headers, data=payload)
-    token_data = response.json()
-    return token_data.get("access_token")
-
-
-
-
-def create_zoom_meeting(ZOOM_API_KEY):
-    url = "https://api.zoom.us/v2/users/me/meetings"
-    headers = {
-        "Authorization": f"Bearer {ZOOM_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "topic": "Scheduled Visit",
-        "type": 2,
-        "start_time": "2025-02-22T10:00:00Z",
-        "duration": 30,
-        "timezone": "Asia/Kolkata",
-        "settings": {"host_video": True, "participant_video": True},
-    }
-
-    response = requests.post(url, headers=headers, json=payload)
-    meeting_data = response.json()
-    print(meeting_data)
-    return meeting_data.get("join_url")
 
 
 @api_view(["GET"])
-def     latest_community_events(request):
+def latest_community_events(request):
     """Fetch latest 3 upcoming community events."""
-    events = CommunityEvent.objects.filter(date__gte=now()).order_by("date")[:3]
+    events = CommunityEvent.objects.all()
     serializer = CommunityEventSerializer(events, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -510,21 +545,21 @@ def     latest_community_events(request):
 def register_for_event(request):
     """Allow a user to register for a community event."""
     username = request.data.get("username")
-    event_name = request.data.get("event_name")
+    event_id = request.data.get("event_id")
 
-    if not username or not event_name:
+    if not username or not event_id:
         return Response({"error": "Username and Event Name are required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user = CustomUser.objects.get(username=username)
-        event = CommunityEvent.objects.get(name=event_name)
+        event = CommunityEvent.objects.get(id=event_id)
 
         # Add user to event
         event.registered_users.add(user)
         event.total_registered = event.registered_users.count()
         event.save()
 
-        return Response({"message": f"{username} successfully registered for {event_name}"}, status=status.HTTP_200_OK)
+        return Response({"message": f"{username} successfully registered for {event_id}"}, status=status.HTTP_200_OK)
 
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -554,3 +589,42 @@ def get_user_medications(request, username):
 
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(["GET"])
+def get_patient_details(request, username):
+    try:
+        patient = Patient.objects.select_related("care_manager", "admin", "kin").get(user__username=username)
+        serializer = PatientDetailSerializer(patient)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Patient.DoesNotExist:
+        return Response({"error": "Patient not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+
+@api_view(["GET"])
+def get_prescriptions(request, user_id):
+    prescriptions = Prescription.objects.filter(user_id=user_id)
+    serializer = PrescriptionSerializer(prescriptions, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+def add_prescription(request):
+    serializer = PrescriptionSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Lab Reports - GET and POST APIs
+@api_view(["GET"])
+def get_lab_reports(request, user_id):
+    lab_reports = LabReport.objects.filter(user_id=user_id)
+    serializer = LabReportSerializer(lab_reports, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+def add_lab_report(request):
+    serializer = LabReportSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

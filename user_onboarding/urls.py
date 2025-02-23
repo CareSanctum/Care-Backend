@@ -18,4 +18,6 @@ urlpatterns = [
     path("register-event/", register_for_event, name="register-event"),
     path("medications/", get_all_medications, name="all-medications"),
     path("medications/<str:username>/", get_user_medications, name="user-medications"),
+    path("patient/<str:username>/", get_patient_details, name="get_patient_details"),
+    path("contact-CM/", contact_CM, name="contact-CareManager")   
 ]

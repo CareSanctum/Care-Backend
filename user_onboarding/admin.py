@@ -91,8 +91,8 @@ class ScheduledVisitAdmin(admin.ModelAdmin):
     search_fields = ("patient__username", "visit_type")
 
 class CommunityEventAdmin(admin.ModelAdmin):
-    list_display = ("name", "date", "total_registered")
-    search_fields = ("name",)
+    list_display = ("id","name", "date", "total_registered")
+    search_fields = ("id",)
     ordering = ("date",)
 
 class CurrentMedicationAdmin(admin.ModelAdmin):

@@ -206,6 +206,7 @@ class ScheduledVisit(models.Model):
 
 
 class CommunityEvent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False) 
     name = models.CharField(max_length=255)
     description = models.TextField()
     date = models.DateTimeField()
@@ -247,3 +248,22 @@ class CurrentMedication(models.Model):
 
     def __str__(self):
         return f"{self.medicine_name} - {self.user.username}"
+
+
+class Prescription(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="prescriptions")
+    Presc_file_url = models.URLField()
+    doctor_name = models.CharField(max_length=255)
+    prescribed_date = models.DateField()
+
+    def __str__(self):
+        return f"Prescription by {self.doctor_name} on {self.prescribed_date}"
+
+class LabReport(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="lab_reports")
+    test_name = models.CharField(max_length=255)
+    test_date = models.DateField()
+    LR_file_url = models.URLField()
+
+    def __str__(self):
+        return f"Lab Report: {self.test_name} on {self.test_date}"

@@ -121,3 +121,26 @@ class CurrentMedicationSerializer(serializers.ModelSerializer):
         model = CurrentMedication
         fields = ["id", "user", "medicine_name", "dosage", "timing", "prescribed_by", "expiry_date", "stock_remaining", "status"]
 
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["id", "username", "phone_number", "email", "role"]
+
+class PatientDetailSerializer(serializers.ModelSerializer):
+    care_manager = CustomUserSerializer()
+    admin = CustomUserSerializer()
+    kin = CustomUserSerializer()
+
+    class Meta:
+        model = Patient
+        fields = ["care_manager", "admin", "kin"]
+
+class PrescriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Prescription
+        fields = ["id", "user", "Presc_file_url", "doctor_name", "prescribed_date"]
+
+class LabReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LabReport
+        fields = ["id", "user", "test_name", "test_date", "LR_file_url"]
