@@ -197,18 +197,27 @@ class FileUploadAPIView(APIView):
             folder = f"medical_history/{user_name}"
             model_name = "MedicalHistory"
         elif field_name in ALLOWED_FIELDS["LabReport"]:
-            model = LabReport
+            if not user_name:
+                return Response({"error": "User name is required for LabReport"}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = CustomUser.objects.filter(username=user_name).first()
+            if not user:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
             instance, _ = LabReport.objects.get_or_create(
-                user__username=user_name if user_name else None,
+                user=user,
                 test_name=test_name if test_name else "",
                 test_date=test_date if test_date else None
             )
-            folder = f"lab_reports/{user_name if user_name else 'general'}"
+            folder = f"lab_reports/{user_name}"
             model_name = "LabReport"
         elif field_name in ALLOWED_FIELDS["Prescription"]:
-            model = Prescription
+            user_instance = CustomUser.objects.filter(username=user_name).first() if user_name else None
+            if not user_instance:
+                return Response({"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+
             instance, _ = Prescription.objects.get_or_create(
-                user__username=user_name if user_name else None,
+                user=user_instance,
                 doctor_name=doctor_name if doctor_name else "",
                 prescribed_date=prescribed_date if prescribed_date else None
             )
@@ -497,7 +506,7 @@ class ScheduleVisitAPIView(APIView):
         if existing_visit:
             existing_visit.scheduled_datetime = scheduled_datetime
             existing_visit.gmeet_link = gmeet_link
-            existing_visit.status = status_val
+            existing_visit.status = "rescheduled"
             existing_visit.save()
             return Response({"message": "Visit rescheduled successfully","meet_link":gmeet_link}, status=status.HTTP_200_OK)
         
@@ -589,7 +598,7 @@ def get_user_medications(request, username):
 
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-    
+
 @api_view(["GET"])
 def get_patient_details(request, username):
     try:
@@ -616,8 +625,15 @@ def add_prescription(request):
 
 # Lab Reports - GET and POST APIs
 @api_view(["GET"])
-def get_lab_reports(request, user_id):
-    lab_reports = LabReport.objects.filter(user_id=user_id)
+def get_lab_reports(request, username):
+    user = get_object_or_404(CustomUser, username=username)
+
+    # Get lab reports for the user
+    lab_reports = LabReport.objects.filter(user=user)
+
+    if not lab_reports.exists():
+        return Response({"message": "No lab reports found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
     serializer = LabReportSerializer(lab_reports, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 

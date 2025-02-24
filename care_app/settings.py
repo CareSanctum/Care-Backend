@@ -70,7 +70,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "apikey"  # This is the fixed value for SendGrid
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")  # Replace with your API Key
 DEFAULT_FROM_EMAIL = "sairamp@caresanctum.com"
-EMAIL_TIMEOUT = 10
+# EMAIL_TIMEOUT = 10
 
 
 WSGI_APPLICATION = 'care_app.wsgi.application'

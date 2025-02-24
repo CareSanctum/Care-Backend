@@ -19,5 +19,7 @@ urlpatterns = [
     path("medications/", get_all_medications, name="all-medications"),
     path("medications/<str:username>/", get_user_medications, name="user-medications"),
     path("patient/<str:username>/", get_patient_details, name="get_patient_details"),
-    path("contact-CM/", contact_CM, name="contact-CareManager")   
+    path("contact-CM/", contact_CM, name="contact-CareManager"),
+    path("lab-reports/<str:username>/", get_lab_reports, name="get_lab_reports"),
+    path("api/prescriptions/<int:user_id>/", get_prescriptions, name="get_prescriptions"),
 ]
