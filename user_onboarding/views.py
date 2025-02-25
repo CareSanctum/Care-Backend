@@ -430,7 +430,26 @@ class CreateTicketForCareManagerView(generics.CreateAPIView):
         }
 
         result = create_or_update_ticket(**ticket_data)
-        send_email(f"{username} intiated service request for {service_name}",f"{username} intiated service request for {service_name}",[care_manager.email])
+        email_body = f"""
+Dear Care Manager,
+
+I hope this message finds you well.
+
+We would like to inform you that {username} initiated a service request for {service_name}.
+
+User Details:
+- Username: {username}
+- Contact: {user.phone_number}
+- Email: {user.email}
+
+Please review and take necessary action on this request.
+
+If you need any further information, feel free to reach out.
+
+Best regards,
+CareSanctum
+"""
+        send_email(f"Service Request Notification for {username}",email_body,[care_manager.email])
         return Response(result, status=status.HTTP_201_CREATED)
     
 def send_email(subject, message, recipient_emails):
@@ -462,7 +481,28 @@ def contact_CM(request):
     if not care_manager:
         return Response({"error": "No care manager assigned to the user"}, status=status.HTTP_400_BAD_REQUEST)
     
-    send_email("Support Required",f"User-{username} intiated a contact Request. Kinldy reach out to them",[care_manager.email])
+    email_body = f"""
+Dear Care Manager,
+
+I hope this message finds you well.
+
+We would like to inform you that {username} has initiated a contact request:
+
+User Details:
+- Username: {username}
+- Contact: {user.phone_number}
+- Email: {user.email}
+
+
+Please review the message and get in touch with the user as soon as possible.
+
+If you need any further information, feel free to reach out.
+
+Best regards,
+CareSanctum
+"""
+    
+    send_email(f"User {username} has contacted you",email_body,[care_manager.email])
     print ("request received")
     return Response({"message": "Mail Sent to Care Manager. They will reach out to you shortly"}, status=status.HTTP_200_OK)
 
