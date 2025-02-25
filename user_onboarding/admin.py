@@ -100,6 +100,15 @@ class CurrentMedicationAdmin(admin.ModelAdmin):
     search_fields = ("medicine_name", "user__username", "prescribed_by")
     list_filter = ("status", "expiry_date")
 
+class PrescriptionAdmin(admin.ModelAdmin):
+    list_display =("prescribed_date", "doctor_name","Presc_file_url")
+    search_fields = ("user__username",)
+
+class LabReportAdmin(admin.ModelAdmin):
+    list_display = ("test_date", "test_name","LR_file_url")
+    search_fields = ("user__username",)
+
+
 # Registering all models
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Patient, PatientAdmin)
@@ -115,3 +124,5 @@ admin.site.register(VitalSigns, VitalSignsAdmin)
 admin.site.register(HealthMetrics, HealthMetricsAdmin)
 admin.site.register(CheckupSchedule, CheckupScheduleAdmin)
 admin.site.register(HealthStatusOverview, HealthStatusOverviewAdmin)
+admin.site.register(Prescription, PrescriptionAdmin)
+admin.site.register(LabReport, LabReportAdmin)

@@ -116,10 +116,6 @@ class CommunityEventSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "description", "date", "total_registered", "location"]
 
 
-class CurrentMedicationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CurrentMedication
-        fields = ["id", "user", "medicine_name", "dosage", "timing", "prescribed_by", "expiry_date", "stock_remaining", "status"]
 
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -144,3 +140,18 @@ class LabReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = LabReport
         fields = ["id", "user", "test_name", "test_date", "LR_file_url"]
+
+class MedicationSerializer(serializers.ModelSerializer):
+    documents = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CurrentMedication
+        fields = '__all__'
+    
+    def get_documents(self, obj):
+        return [doc.document_url for doc in obj.documents.all()]
+
+class MedicalDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicalDocuments
+        fields = '__all__'

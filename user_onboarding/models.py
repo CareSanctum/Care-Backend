@@ -233,21 +233,30 @@ class CurrentMedication(models.Model):
         ("completed", "Completed"),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="medications")
-    medicine_name = models.CharField(max_length=255)
-    dosage = models.CharField(max_length=100)  # Example: "1 tablet"
-    timing = models.CharField(max_length=100)  # Example: "After Breakfast"
-    prescribed_by = models.CharField(max_length=255)  # Doctor's name
-    expiry_date = models.DateField()
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="medications")
+    medicine_name = models.CharField(max_length=255, blank=True, null=True)
+    dosage = models.CharField(max_length=100, blank=True, null=True)
+    timing = models.CharField(max_length=100, blank=True, null=True)
+    prescribed_by = models.CharField(max_length=255, blank=True, null=True)
+    expiry_date = models.DateField(blank=True, null=True)
     stock_remaining = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="current")
 
     def is_expired(self):
         """Check if the medicine is expired."""
-        return self.expiry_date < now().date()
+        return self.expiry_date and self.expiry_date < now().date()
 
     def __str__(self):
-        return f"{self.medicine_name} - {self.user.username}"
+        return f"{self.medicine_name} - {self.user.username}" if self.medicine_name else f"Medication for {self.user.username}"
+    
+class MedicalDocuments(models.Model):
+    medication = models.ForeignKey(CurrentMedication, on_delete=models.CASCADE, related_name="documents")
+    document_url = models.CharField(max_length=500)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Document for {self.medication} ({self.uploaded_at})"
+  
 
 
 class Prescription(models.Model):

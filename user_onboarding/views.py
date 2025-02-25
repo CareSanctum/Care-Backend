@@ -17,6 +17,10 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from django.utils.timezone import now
 from django.core.mail import send_mail
+import datetime
+from rest_framework import serializers, viewsets
+from rest_framework.response import Response
+from rest_framework.decorators import action
 
 # Initialize S3 client using Django settings
 s3 = boto3.client(
@@ -458,9 +462,9 @@ def contact_CM(request):
     if not care_manager:
         return Response({"error": "No care manager assigned to the user"}, status=status.HTTP_400_BAD_REQUEST)
     
-    send_email(f"{username} intiated service request for",f"{username} intiated service request for ",[care_manager.email])
+    send_email("Support Required",f"User-{username} intiated a contact Request. Kinldy reach out to them",[care_manager.email])
     print ("request received")
-    return Response({"message": "Mail Sent to Care Manager"}, status=status.HTTP_200_OK)
+    return Response({"message": "Mail Sent to Care Manager. They will reach out to you shortly"}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -576,28 +580,53 @@ def register_for_event(request):
         return Response({"error": "Event not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
+# ViewSets
+class MedicationViewSet(viewsets.ModelViewSet):
+    @action(detail=False, methods=['post'])
+    def upload_document(self, request):
+        username = request.data.get("username")
+        file = request.FILES.get("file")
+        medicine_name = request.data.get("medicine_name")
+        dosage = request.data.get("dosage")
+        timing = request.data.get("timing")
+        prescribed_by = request.data.get("prescribed_by")
+        expiry_date = request.data.get("exp_date")
+        
+        if not username or not file:
+            return Response({"error": "Username and file are required"}, status=400)
+        
+        user = CustomUser.objects.filter(username=username).first()
+        if not user:
+            return Response({"error": "User not found"}, status=400)
+        
+        # Upload file to S3
+        bucket_name = BUCKET_NAME
+        file_key = f"medical_documents/{username}/{file.name}"
+        s3.upload_fileobj(file, bucket_name, file_key, ExtraArgs={'ACL': 'public-read'})
+        file_url = f"https://{bucket_name}.s3.amazonaws.com/{file_key}"
+
+        # Create an empty medication record
+        medication = CurrentMedication.objects.create(
+            user=user,medicine_name=medicine_name,dosage=dosage,timing=timing,prescribed_by=prescribed_by,stock_remaining=0,expiry_date=expiry_date)
+        
+        # Store document URL in MedicalDocument
+        MedicalDocuments.objects.create(medication=medication, document_url=file_url)
+        return Response({"message": "File uploaded successfully", "document_url": file_url}, status=201)
 
 
-@api_view(["GET"])
-def get_all_medications(request):
-    """Fetch all medications for all users."""
-    medications = CurrentMedication.objects.all()
-    serializer = CurrentMedicationSerializer(medications, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-@api_view(["GET"])
-def get_user_medications(request, username):
-    """Fetch medications for a specific user with status filtering (default: current)."""
-    status_filter = request.GET.get("status", "current")  # Default is 'current'
-
-    try:
-        user = User.objects.get(username=username)
-        medications = CurrentMedication.objects.filter(user=user, status=status_filter)
-        serializer = CurrentMedicationSerializer(medications, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    @action(detail=False, methods=['get'])
+    def get_medications(self, request):
+        username = request.query_params.get("username")
+        if not username:
+            return Response({"error": "Username is required"}, status=400)
+        
+        user = CustomUser.objects.filter(username=username).first()
+        if not user:
+            return Response({"error": "User not found"}, status=400)
+        
+        medications = CurrentMedication.objects.filter(user=user)
+        serializer = MedicationSerializer(medications, many=True)
+        return Response(serializer.data, status=200)
 
 @api_view(["GET"])
 def get_patient_details(request, username):
@@ -610,9 +639,16 @@ def get_patient_details(request, username):
     
 
 @api_view(["GET"])
-def get_prescriptions(request, user_id):
-    prescriptions = Prescription.objects.filter(user_id=user_id)
-    serializer = PrescriptionSerializer(prescriptions, many=True)
+def get_prescriptions(request, username):
+    user = get_object_or_404(CustomUser, username=username)
+
+    # Get lab reports for the user
+    Prescription_list = Prescription.objects.filter(user=user)
+
+    # if not Prescription_list.exists():
+    #     return Response({"message": "No Prescriptions found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = PrescriptionSerializer(Prescription_list, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(["POST"])
@@ -631,8 +667,8 @@ def get_lab_reports(request, username):
     # Get lab reports for the user
     lab_reports = LabReport.objects.filter(user=user)
 
-    if not lab_reports.exists():
-        return Response({"message": "No lab reports found for this user."}, status=status.HTTP_404_NOT_FOUND)
+    # if not lab_reports.exists():
+    #     return Response({"message": "No lab reports found for this user."}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = LabReportSerializer(lab_reports, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -644,3 +680,15 @@ def add_lab_report(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AssignedPatientsView(APIView):
+    def get(self, request, care_manager_username):
+        try:
+            care_manager = CustomUser.objects.get(username=care_manager_username, role="CARE_MANAGER")
+        except CustomUser.DoesNotExist:
+            return Response({"error": "Care Manager not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        assigned_users = CustomUser.objects.filter(patient_profile__care_manager=care_manager)
+        serializer = CustomUserSerializer(assigned_users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
