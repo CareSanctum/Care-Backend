@@ -23,4 +23,5 @@ urlpatterns = [
     path("prescriptions/<str:username>/", get_prescriptions, name="get_prescriptions"),
     path("get-assigned-users/<str:care_manager_username>/",AssignedPatientsView.as_view() , name ="get_assigned_care_managers"),
     path("assign/", AssignRolesView.as_view(), name="assign"),
+    path("create-admin/", create_admin_user, name="create-admin"),
 ]
