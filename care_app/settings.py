@@ -6,6 +6,10 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
+
+# To load Environment Varibles 
+import os 
+from dotenv import load_dotenv
 from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,8 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure--yghem+^5tk@p_vor(vw_jbm_xcecyer*1@(f&iu65poj5(#n7'
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+
+
+DEBUG = os.getenv("DEBUG", "False") == "True"
 # Application definition
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -60,9 +65,6 @@ TEMPLATES = [
     },
 ]
 
-import os 
-from dotenv import load_dotenv
-
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.sendgrid.net"
 EMAIL_PORT = 587
@@ -73,46 +75,70 @@ DEFAULT_FROM_EMAIL = "sairamp@caresanctum.com"
 
 
 WSGI_APPLICATION = 'care_app.wsgi.application'
-CORS_ALLOW_ALL_ORIGINS = True  # Set to True to allow all, not recommended for production
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8081",  # Your React frontend
-    "http://localhost:8080",
-    "http://localhost:8082",
-    "https://jocular-moonbeam-bc725b.netlify.app"
-]
-CORS_ALLOW_HEADERS = ["Authorization", "Content-Type"]
-CORS_ALLOW_CREDENTIALS = True
 
-import os 
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+    CORS_ALLOW_ALL_ORIGINS = True  # Set to True to allow all, not recommended for production
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:8081",  # Your React frontend
+        "http://localhost:8080",
+        "http://localhost:8082",
+        "https://jocular-moonbeam-bc725b.netlify.app",
+        "https://webapp.caresanctum.com",
+    ]
+    CORS_ALLOW_HEADERS = ["Authorization", "Content-Type"]
+    CORS_ALLOW_CREDENTIALS = True
 
-import dj_database_url
+    DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+    
+else:
+    ALLOWED_HOSTS = [
+        "https://15.206.160.34",
+        "https://webapp.caresanctum.com", 
+        "https://jocular-moonbeam-bc725b.netlify.app",
+        "https://backendapp.caresanctum.com"]
+    CORS_ALLOW_ALL_ORIGINS = False  # Set to True to allow all, not recommended for production
+    CORS_ALLOWED_ORIGINS = [
+        #EC2 Public IP
+        "https://15.206.160.34",
+        "https://backendapp.caresanctum.com", #backend domain
+        "https://webapp.caresanctum.com", #webapp domain
+        "https://jocular-moonbeam-bc725b.netlify.app" #backup netlify domain
+    ]
+    CORS_ALLOW_HEADERS = ["Authorization", "Content-Type"]
+    CORS_ALLOW_CREDENTIALS = True
 
-from dotenv import load_dotenv
+    DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv("DB_NAME"),
+	    'USER': os.getenv("DB_USER"),
+	    'PASSWORD': os.getenv("DB_PASSWORD"),
+	    'HOST': os.getenv("DB_HOST"),
+	    'PORT': os.getenv("DB_PORT"),
+    }
+}
 
+
+
+
+#AWS S3 Bucket Configuration
 load_dotenv()
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
 
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-# DATABASES = {
-#     'default': dj_database_url.config(default=os.getenv("DATABASE_URL"), conn_max_age=600)
-#     }
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -139,7 +165,6 @@ USE_I18N = True
 USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
-STATIC_URL = 'static/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
