@@ -76,6 +76,7 @@ DEFAULT_FROM_EMAIL = "sairamp@caresanctum.com"
 
 WSGI_APPLICATION = 'care_app.wsgi.application'
 
+#seperate Prdouction and Development settings
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
     CORS_ALLOW_ALL_ORIGINS = True  # Set to True to allow all, not recommended for production
