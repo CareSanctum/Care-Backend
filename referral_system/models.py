@@ -1,9 +1,14 @@
 from django.db import models
 from user_onboarding.models import CustomUser
 from django.utils.text import slugify
+from django.utils.timezone import now
 import random
 import string
 # Create your models here.
+
+#global Variables to configure Percentage
+B2B_COMMISSION_PERCENTAGE = 0
+B2C_COMMISSION_PERCENTAGE = 0
 
 def generate_referral_code(name):
     base_code = slugify(name)[:10].upper()
@@ -55,7 +60,7 @@ class B2CUser(models.Model):
 class ReferralCode(models.Model):
     type = models.CharField(max_length=255, choices=(("B2B_PARTNER", "B2B Partner"), ("B2C_USER", "B2C user")))
     # only one of these fields will be filled depending on wether the referral code belongs to a b2b partner or a b2c user
-    b2b_partner = models.ForeignKey(B2BPartner, on_delete=models.CASCADE, null=True, blank=True, related_name="referral_codes")
+    b2b_partner = models.OneToOneField(B2BPartner, on_delete=models.CASCADE, null=True, blank=True, related_name="referral_codes")
     b2c_user = models.OneToOneField(B2CUser, on_delete=models.CASCADE, null=True, blank=True, related_name="referral_code")
     code = models.CharField(max_length=255, unique=True)
 
@@ -76,6 +81,7 @@ class ReferralCode(models.Model):
 class Lead(models.Model):
     user  = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     referred_through = models.ForeignKey(ReferralCode, on_delete=models.SET_NULL, null=True, blank=True, related_name="leads")
+    date_referred = models.DateField(default=now)
     converted =models.BooleanField(default=False)
     
     def __str__(self):
@@ -94,6 +100,7 @@ class Commission(models.Model):
     status = models.CharField(max_length=255, choices=STATUS_CHOICES, default="IN_PROCESS")
     percentage = models.FloatField()
     amount = models.FloatField()
+    date_converted = models.DateField(default=now)
     b2b_receipent = models.ForeignKey(B2BPartner, null=True, blank=True, on_delete=models.CASCADE)
     b2c_receipent = models.ForeignKey(B2CUser, null=True, blank=True, on_delete=models.CASCADE)
 

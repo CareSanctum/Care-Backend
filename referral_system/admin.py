@@ -35,7 +35,7 @@ class LeadAdmin(admin.ModelAdmin):
     get_referred_through_code.short_description = "Referred Through Code" # Column header
 
 class CommissionAdmin(admin.ModelAdmin):
-    list_display = ("id", "b2b_partner", "b2c_user", "amount", "status")
+    list_display = ("id", "b2b_receipent", "b2c_receipent", "amount", "status")
     search_fields = ("b2b_partner__company_name", "b2c_user__user__username")
     list_filter = ("status",)
 
@@ -43,3 +43,4 @@ admin.site.register(B2BPartner, B2BPatnerAdmin)
 admin.site.register(B2CUser, B2CUserAdmin)
 admin.site.register(ReferralCode, ReferralCodeAdmin)
 admin.site.register(Lead, LeadAdmin)
+admin.site.register(Commission, CommissionAdmin)

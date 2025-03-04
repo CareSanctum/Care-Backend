@@ -64,8 +64,8 @@ class RegisterView(generics.CreateAPIView):
                 alternate_phone="",
                 pin_code=""
             )
-            B2CUser.objects.create(user=user)
-
+            #creates a B2C object of a user when a user is created
+            B2CUser.objects.create(user=user)      
         # ✅ Generate JWT tokens
         token = RefreshToken.for_user(user)
         return Response({
