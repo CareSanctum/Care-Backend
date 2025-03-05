@@ -22,6 +22,8 @@ from rest_framework import serializers, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+from referral_system.models import *
+
 # Initialize S3 client using Django settings
 s3 = boto3.client(
     "s3",
@@ -37,6 +39,7 @@ class RegisterView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        referral_code = request.data.get("referral_code")
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
@@ -61,7 +64,8 @@ class RegisterView(generics.CreateAPIView):
                 alternate_phone="",
                 pin_code=""
             )
-
+            #creates a B2C object of a user when a user is created
+            B2CUser.objects.create(user=user)      
         # ✅ Generate JWT tokens
         token = RefreshToken.for_user(user)
         return Response({

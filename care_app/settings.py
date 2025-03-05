@@ -19,6 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure--yghem+^5tk@p_vor(vw_jbm_xcecyer*1@(f&iu65poj5(#n7'
 # SECURITY WARNING: don't run with debug turned on in production!
 
+load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 # Application definition
@@ -32,6 +33,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "user_onboarding",
+    "referral_system",
     "corsheaders",
     "whitenoise.runserver_nostatic"
 ]
@@ -77,6 +79,12 @@ DEFAULT_FROM_EMAIL = "sairamp@caresanctum.com"
 WSGI_APPLICATION = 'care_app.wsgi.application'
 
 #seperate Prdouction and Development settings
+# print(DEBUG)
+# print(os.getenv("DB_NAME"))
+# print(os.getenv("DB_USER"))
+# print(os.getenv("DB_PASSWORD"))
+# print(os.getenv("DB_HOST"))
+# print(os.getenv("DB_PORT"))
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
     CORS_ALLOW_ALL_ORIGINS = True  # Set to True to allow all, not recommended for production
@@ -129,7 +137,6 @@ else:
 
 
 #AWS S3 Bucket Configuration
-load_dotenv()
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
