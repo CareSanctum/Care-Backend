@@ -7,4 +7,6 @@ urlpatterns = [
     path("create-lead/", create_lead, name="create-lead"),
     path("create-commission/", create_commission, name="create-commission"),
     path("get-leads/", get_leads_and_commissions, name="get-leads"),
+    path("get-b2c-referral-stats/", get_b2c_referral_stats, name="get-b2c-referral-stats"),
+    path("get-b2b-referral-stats/", get_b2b_referral_stats, name="get-b2b-referral-stats")
 ]
