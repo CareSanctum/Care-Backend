@@ -22,5 +22,6 @@ urlpatterns = [
     
     path("api/", include("user_onboarding.urls")),
 
+    path ("referrals/", include("referral_system.urls"))
 
 ]
