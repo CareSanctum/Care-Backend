@@ -46,7 +46,7 @@ class Patient(models.Model):
         ('AB+', 'AB+'), ('AB-', 'AB-'), ('O+', 'O+'), ('O-', 'O-'),
     ]
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="patient_profile")
-    care_manager = models.OneToOneField(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_patient", limit_choices_to={'role': 'CARE_MANAGER'})
+    care_manager = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_patient", limit_choices_to={'role': 'CARE_MANAGER'})
     admin = models.OneToOneField(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="admin_patient", limit_choices_to={'role': 'ADMIN'})
     kin = models.OneToOneField(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="kin_patient", limit_choices_to={'role': 'USER_KIN'})
     dob = models.DateField(verbose_name="Date of Birth",null = True, blank=True)
