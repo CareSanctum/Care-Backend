@@ -142,16 +142,10 @@ class LabReportSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "test_name", "test_date", "LR_file_url"]
 
 class MedicationSerializer(serializers.ModelSerializer):
-    documents = serializers.SerializerMethodField()
     
     class Meta:
         model = CurrentMedication
         fields = '__all__'
     
-    def get_documents(self, obj):
-        return [doc.document_url for doc in obj.documents.all()]
 
-class MedicalDocumentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MedicalDocuments
-        fields = '__all__'
+

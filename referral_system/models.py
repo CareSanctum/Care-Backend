@@ -1,14 +1,10 @@
 from django.db import models
 from user_onboarding.models import CustomUser
 from django.utils.text import slugify
-from django.utils.timezone import now
+from datetime import date
 import random
 import string
 # Create your models here.
-
-#global Variables to configure Percentage
-B2B_COMMISSION_PERCENTAGE = 0
-B2C_COMMISSION_PERCENTAGE = 0
 
 def generate_referral_code(name):
     base_code = slugify(name)[:10].upper()
@@ -81,7 +77,7 @@ class ReferralCode(models.Model):
 class Lead(models.Model):
     user  = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     referred_through = models.ForeignKey(ReferralCode, on_delete=models.SET_NULL, null=True, blank=True, related_name="leads")
-    date_referred = models.DateField(default=now)
+    date_referred = models.DateField(default=date.today)
     converted =models.BooleanField(default=False)
     
     def __str__(self):
@@ -96,11 +92,11 @@ class Commission(models.Model):
         ("NOT_PAID", "Not Paid"),
         ("REJECTED", "Rejected")
     )
-    lead = models.OneToOneField(Lead, on_delete=models.CASCADE)
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="commissions")
     status = models.CharField(max_length=255, choices=STATUS_CHOICES, default="IN_PROCESS")
     percentage = models.FloatField()
     amount = models.FloatField()
-    date_converted = models.DateField(default=now)
+    date_converted = models.DateField(default=date.today)
     b2b_receipent = models.ForeignKey(B2BPartner, null=True, blank=True, on_delete=models.CASCADE)
     b2c_receipent = models.ForeignKey(B2CUser, null=True, blank=True, on_delete=models.CASCADE)
 
@@ -114,4 +110,15 @@ class Commission(models.Model):
     def __str__(self):
         return f"{self.amount} - {self.status}"
 
+
+class CommissionPercentage(models.Model):
+    b2b_commission_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    b2c_commission_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=2.00)
+
+    def __str__(self):
+        return f"B2B Commission: {self.b2b_commission_percentage}%, B2C Commission: {self.b2c_commission_percentage}%"
+
+    class Meta:
+        verbose_name = "Commission Settings"
+        verbose_name_plural = "Commission Settings"
     
