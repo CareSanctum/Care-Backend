@@ -249,13 +249,6 @@ class CurrentMedication(models.Model):
     def __str__(self):
         return f"{self.medicine_name} - {self.user.username}" if self.medicine_name else f"Medication for {self.user.username}"
     
-class MedicalDocuments(models.Model):
-    medication = models.ForeignKey(CurrentMedication, on_delete=models.CASCADE, related_name="documents")
-    document_url = models.CharField(max_length=500)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Document for {self.medication} ({self.uploaded_at})"
   
 
 

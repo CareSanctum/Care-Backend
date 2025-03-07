@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import *
+from user_onboarding.serializers import CustomUserSerializer
 
 class ReferralCodeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -7,7 +8,7 @@ class ReferralCodeSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class LeadSerializer(serializers.ModelSerializer):
-    referred_through = ReferralCodeSerializer()
+    user = CustomUserSerializer()
     class Meta:
         model = Lead
         fields = "__all__"
