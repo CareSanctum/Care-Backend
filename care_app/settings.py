@@ -106,15 +106,18 @@ if DEBUG:
 }
     
 else:
-    ALLOWED_HOSTS = [
-        "https://15.206.160.34",
-        "https://webapp.caresanctum.com", 
-        "https://jocular-moonbeam-bc725b.netlify.app",
-        "https://backendapp.caresanctum.com"]
+
+    ALLOWED_HOSTS = ["*"]
+#    ALLOWED_HOSTS = [
+#        "https://3.110.55.43",
+#        "https://webapp.caresanctum.com",
+#        "https://jocular-moonbeam-bc725b.netlify.app",
+#        "https://backendapp.caresanctum.com"
+#	]
     CORS_ALLOW_ALL_ORIGINS = False  # Set to True to allow all, not recommended for production
     CORS_ALLOWED_ORIGINS = [
         #EC2 Public IP
-        "https://15.206.160.34",
+        "https://3.110.55.43",
         "https://backendapp.caresanctum.com", #backend domain
         "https://webapp.caresanctum.com", #webapp domain
         "https://jocular-moonbeam-bc725b.netlify.app" #backup netlify domain
