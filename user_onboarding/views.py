@@ -340,12 +340,6 @@ def create_or_update_health_data(request, username):
                     defaults=validated_data["health_metrics"]
                 )
 
-            if "checkup_schedule" in validated_data:
-                CheckupSchedule.objects.update_or_create(
-                    patient=patient,
-                    defaults=validated_data["checkup_schedule"]
-                )
-
             if "health_status_overview" in validated_data:
                 HealthStatusOverview.objects.update_or_create(
                     patient=patient,
@@ -629,33 +623,23 @@ class MedicationViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def upload_document(self, request):
         username = request.data.get("username")
-        file = request.FILES.get("file")
         medicine_name = request.data.get("medicine_name")
         dosage = request.data.get("dosage")
         timing = request.data.get("timing")
         prescribed_by = request.data.get("prescribed_by")
         expiry_date = request.data.get("exp_date")
+        stock = request.data.get("stock")
         
-        if not username or not file:
-            return Response({"error": "Username and file are required"}, status=400)
         
         user = CustomUser.objects.filter(username=username).first()
         if not user:
             return Response({"error": "User not found"}, status=400)
         
-        # Upload file to S3
-        bucket_name = BUCKET_NAME
-        file_key = f"medical_documents/{username}/{file.name}"
-        s3.upload_fileobj(file, bucket_name, file_key, ExtraArgs={'ACL': 'public-read'})
-        file_url = f"https://{bucket_name}.s3.amazonaws.com/{file_key}"
-
-        # Create an empty medication record
+        # Create a medication record
         medication = CurrentMedication.objects.create(
-            user=user,medicine_name=medicine_name,dosage=dosage,timing=timing,prescribed_by=prescribed_by,stock_remaining=0,expiry_date=expiry_date)
+            user=user,medicine_name=medicine_name,dosage=dosage,timing=timing,prescribed_by=prescribed_by,stock_remaining=stock,expiry_date=expiry_date)
         
-        # Store document URL in MedicalDocument
-        MedicalDocuments.objects.create(medication=medication, document_url=file_url)
-        return Response({"message": "File uploaded successfully", "document_url": file_url}, status=201)
+        return Response({"message": "File uploaded successfully"}, status=201)
 
 
     @action(detail=False, methods=['get'])
