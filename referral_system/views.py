@@ -13,9 +13,9 @@ def create_link(code):
     return f"https://webapp.caresanctum.com/signup?referral_code={code}"
 
 #get the referral code and link for a b2c user
-@api_view(['POST'])
+@api_view(['GET'])
 def send_b2c_code(request):
-    username = request.data.get('username')
+    username = request.GET.get("username")
     b2c_obj = B2CUser.objects.get(user__username=username)
     referral_code = ReferralCode.objects.get(b2c_user=b2c_obj)
     code = referral_code.code
@@ -23,9 +23,9 @@ def send_b2c_code(request):
     return Response({"code": code, "link": link}, status=status.HTTP_200_OK)
 
 #get the referral code and link for a b2b partner
-@api_view(['POST'])
+@api_view(['GET'])
 def send_b2b_code(request):
-    company_name = request.data.get('company_name')
+    company_name = request.GET.get("company_name")
     b2b_obj = B2BPartner.objects.get(company_name=company_name)
     referral_code = ReferralCode.objects.get(b2b_partner=b2b_obj)
     code = referral_code.code
