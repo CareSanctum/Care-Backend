@@ -62,6 +62,7 @@ class Patient(models.Model):
     current_location_status = models.CharField(max_length=50, null = True, blank=True, choices=[('AtHome', 'At Home'), ('Travelling', 'Travelling')])
     expected_return_date = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=15, blank=True, null = True)
+    email = models.EmailField(unique=True, null=True, blank=True)
     alternate_phone = models.CharField(max_length=15, blank=True, null = True)
     pin_code = models.CharField(max_length=15, blank=True, null = True)
     def __str__(self):

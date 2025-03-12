@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Sum
+from django.db.models import Sum, Value, FloatField
 from .models import *
 from .serializers import *
 from rest_framework.decorators import api_view
@@ -270,3 +270,49 @@ def get_b2b_referral_stats(request):
         return Response({"error": "Referral code not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+from django.db.models.functions import Coalesce
+
+@api_view(["GET"])
+def ranked_b2c_users_by_commission(request):
+    """
+    Returns a list of B2C users ranked by their total commission earnings.
+    Includes users with 0 earnings.
+    """
+    # Annotate total commission earnings (ensuring it's always a FloatField)
+    b2c_users_with_commission = (
+        B2CUser.objects.annotate(
+            total_earnings=Coalesce(
+                Sum("commission__amount", output_field=FloatField()),  # Ensure float output
+                Value(0.0, output_field=FloatField())  # Default to 0.0 if no earnings
+            )
+        )
+        .order_by("-total_earnings")  # Order by highest earnings
+    )
+
+    # Prepare ranked response
+    ranked_data = [
+        {
+            "rank": index + 1,
+            "username": user.user.username,
+            "total_earnings": float(user.total_earnings)  # Ensure JSON returns a float
+        }
+        for index, user in enumerate(b2c_users_with_commission)
+    ]
+
+    return Response(ranked_data)
+
+@api_view(["POST"])
+def createreview(request):
+    username = request.GET.get("username")
+    stars = request.GET.get("stars")
+    review = request.GET.get("review")
+
+    b2c_user = B2CUser.objects.get(user__username=username)
+
+    if not b2c_user:
+        return Response({"error": "user not found"} , status=status.HTTP_404_NOT_FOUND)
+    
+    
+    
+
