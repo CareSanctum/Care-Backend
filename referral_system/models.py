@@ -15,6 +15,7 @@ def generate_referral_code(name):
 class B2BPartner(models.Model):
     registered_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="registered_b2b_partners")
     company_name = models.CharField(max_length=255, unique=True)
+    image_link = models.CharField(max_length=255, unique=True,null = True)
 
     def save(self, *args, **kwargs):
         if self.registered_by.role != "ADMIN":
@@ -81,7 +82,7 @@ class Lead(models.Model):
     converted =models.BooleanField(default=False)
     
     def __str__(self):
-        return f"{self.user.username} - Referred through {self.referred_through.code}"
+        return f"{self.user.username} - Referred through {self.converted}"
 
     
 

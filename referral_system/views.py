@@ -30,7 +30,19 @@ def send_b2b_code(request):
     referral_code = ReferralCode.objects.get(b2b_partner=b2b_obj)
     code = referral_code.code
     link = create_link(code)
-    return Response({"code": code, "link": link}, status=status.HTTP_200_OK)   
+    return Response({"code": code, "link": link}, status=status.HTTP_200_OK)  
+
+@api_view(['GET'])
+def send_b2b_details(request):
+    user_name = request.GET.get("username")
+    user = CustomUser.objects.get(username = user_name)
+    b2b_obj = B2BPartner.objects.get(registered_by = user)
+    referral_code = ReferralCode.objects.get(b2b_partner=b2b_obj)
+    code = referral_code.code
+    link = create_link(code)
+    company = b2b_obj.company_name
+    image_link = b2b_obj.image_link
+    return Response({"code": code, "link": link,"company_name":company,"image_link":image_link}, status=status.HTTP_200_OK)  
 
 #creates a lead object when they put a referral code
 @api_view(['POST'])
@@ -146,11 +158,6 @@ def get_leads_and_commissions(request):
         if referral.type == "B2C_USER" and referral.b2c_user.user.username != username:
             return Response({"error": "You do not have permission to view this referral code's data."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Ownership check for B2BPartner (company name check)
-        elif referral.type == "B2B_PARTNER" and referral.b2b_partner.company_name != company_name:
-            return Response({"error": "You do not have permission to view this referral code's data."}, status=status.HTTP_403_FORBIDDEN)
-
-
         # Find all leads associated with this referral code
         leads = Lead.objects.filter(referred_through=referral)
 
@@ -225,20 +232,15 @@ def get_b2c_referral_stats(request):
     
 @api_view(["GET"])
 def get_b2b_referral_stats(request):
-    company_name = request.GET.get("company_name")
-    referral_code = request.GET.get("referral_code")
-
-    if (not company_name) and (not referral_code):
-        return Response(
-            {"error": "Please provide both username and referral_code."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    username = request.GET.get("username")
+    
     try:
         # Find the B2C user associated with the provided username
-        b2b_partner = B2BPartner.objects.get(company_name=company_name)
+        user = CustomUser.objects.get(username = username)
+        b2b_partner = B2BPartner.objects.get(registered_by = user)
         
         # Find the ReferralCode with the provided code
-        referral = ReferralCode.objects.get(code=referral_code)
+        referral = ReferralCode.objects.get(b2b_partner = b2b_partner)
 
         # Ensure the ReferralCode is linked to the B2C user
         if referral.type != "B2B_PARTNER" or referral.b2b_partner != b2b_partner:
