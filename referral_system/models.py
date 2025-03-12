@@ -121,4 +121,9 @@ class CommissionPercentage(models.Model):
     class Meta:
         verbose_name = "Commission Settings"
         verbose_name_plural = "Commission Settings"
+
+class Review(models.Model):
+    user = models.OneToOneField(B2CUser, on_delete=models.CASCADE, related_name="user_reviews")
+    star = models.FloatField()
+    review_content  = models.TextField(default=True, blank=True)
     

@@ -62,10 +62,26 @@ class RegisterView(generics.CreateAPIView):
                 expected_return_date=None,
                 phone=user.phone_number,
                 alternate_phone="",
+                email = user.email,
                 pin_code=""
             )
             #creates a B2C object of a user when a user is created
-            B2CUser.objects.create(user=user)      
+            B2CUser.objects.create(user=user) 
+
+            if referral_code:
+                try:
+                    # Check if the referral code exists
+                    referral = ReferralCode.objects.get(code=referral_code)
+                    
+                    # ✅ Create a new lead associated with the referral code
+                    Lead.objects.create(
+                        user=user,
+                        referred_through=referral,
+                        converted=False  # Default to False until conversion happens
+                    )
+                except ReferralCode.DoesNotExist:
+                    return Response({"error": "Invalid referral code"}, status=status.HTTP_400_BAD_REQUEST)
+
         # ✅ Generate JWT tokens
         token = RefreshToken.for_user(user)
         return Response({
