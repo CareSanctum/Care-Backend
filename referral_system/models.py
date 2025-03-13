@@ -18,8 +18,8 @@ class B2BPartner(models.Model):
     image_link = models.CharField(max_length=255, unique=True,null = True)
 
     def save(self, *args, **kwargs):
-        if self.registered_by.role != "ADMIN":
-            raise ValueError("Only Admins can register B2B Partners")
+        # if self.registered_by.role != "ADMIN":
+        # #     raise ValueError("Only Admins can register B2B Partners")
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
