@@ -7,6 +7,13 @@ from .serializers import *
 from rest_framework.decorators import api_view
 from decimal import Decimal
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from .models import Lead, ReferralCode, B2BPartner, B2CUser, CustomUser
+from .serializers import LeadUserSerializer, ReferralCodeSerializer, B2BPartnerSerializer, B2CUserSerializer
+
 # Create your views here.
 
 def create_link(code):
@@ -319,3 +326,29 @@ def createreview(request):
     
     
 
+@api_view(["GET"])
+def getLeadDetails(request):
+    username = request.GET.get("username")
+    user = get_object_or_404(CustomUser, username=username)
+    lead = get_object_or_404(Lead, user=user)
+        
+    lead_data = LeadUserSerializer(lead).data
+    referral_code_data = None
+    b2b_data = None
+    b2c_data = None
+        
+    if lead.referred_through:
+        referral_code = lead.referred_through
+        referral_code_data = ReferralCodeSerializer(referral_code).data
+            
+        if referral_code.b2b_partner:
+            b2b_data = B2BPartnerSerializer(referral_code.b2b_partner).data
+        elif referral_code.b2c_user:
+            b2c_data = CustomUserSerializer(referral_code.b2c_user.user).data
+        
+    return Response({
+        "lead": lead_data,
+        "referral_code": referral_code_data,
+        "b2b_details": b2b_data,
+        "b2c_details": b2c_data,
+    }, status=status.HTTP_200_OK)
