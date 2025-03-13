@@ -54,8 +54,10 @@ def send_b2b_details(request):
 #creates a lead object when they put a referral code
 @api_view(['POST'])
 def create_lead(request):
-    username = request.data.get("username")
-    referral_code = request.data.get("referral_code")
+    username = request.GET.get("username")
+    referral_code = request.GET.get("referral_code")
+    print(username)
+    print(referral_code)
 
     try:
         user = CustomUser.objects.get(username=username)
