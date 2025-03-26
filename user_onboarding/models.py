@@ -270,3 +270,9 @@ class LabReport(models.Model):
 
     def __str__(self):
         return f"Lab Report: {self.test_name} on {self.test_date}"
+    
+class GoogleFitToken(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    access_token = models.TextField()
+    refresh_token = models.TextField()
+    expires_at = models.DateTimeField()

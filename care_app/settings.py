@@ -51,6 +51,10 @@ MIDDLEWARE = [
 
                            
 ROOT_URLCONF = 'care_app.urls'
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+from datetime import datetime
+print(datetime.now())
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
