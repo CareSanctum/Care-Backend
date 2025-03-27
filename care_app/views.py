@@ -1,13 +1,14 @@
 import requests
 import json
 from datetime import datetime, timedelta, timezone
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.http import JsonResponse
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from user_onboarding.models import GoogleFitToken
 import urllib.parse
 from user_onboarding.models import CustomUser
+from django.utils.timezone import now
 
 # Load client secrets
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
@@ -30,13 +31,16 @@ GOOGLE_FIT_SCOPES = (
 
 
 # Step 1: Initiate Google Fit Auth
+from django.http import JsonResponse
+import urllib.parse
+
 def google_fit_auth(request):
-    user_email = request.GET.get("user_email")
-    if not user_email:
+    user_name = request.GET.get("user_name")
+    if not user_name:
         return JsonResponse({"error": "Email parameter missing"})
     
-    # URL-encode the user_email and include it in the state parameter
-    state = urllib.parse.quote(user_email)
+    # URL-encode the user_name and include it in the state parameter
+    state = urllib.parse.quote(user_name)
     auth_url = (
         "https://accounts.google.com/o/oauth2/auth?"
         "response_type=code&"
@@ -47,7 +51,10 @@ def google_fit_auth(request):
         "prompt=consent&"
         f"state={state}"
     )
-    return redirect(auth_url)
+    
+    # Return the auth URL in the response instead of redirecting
+    return JsonResponse({"auth_url": auth_url})
+
 
 
 # Step 2: Handle Callback and Save Tokens
@@ -65,7 +72,7 @@ def google_fit_callback(request):
         "redirect_uri": REDIRECT_URI,
         "grant_type": "authorization_code",
     }
-    user_email = urllib.parse.unquote(state)
+    username = urllib.parse.unquote(state)
     response = requests.post(token_url, data=data)
 
     if response.status_code == 200:
@@ -75,27 +82,27 @@ def google_fit_callback(request):
         expires_at = datetime.utcnow() + timedelta(seconds=tokens.get("expires_in", 3600))
 
         if not refresh_token:
-            creds = GoogleFitToken.objects.filter(user=request.user).first()
+            creds = GoogleFitToken.objects.filter(user=CustomUser.get(username)).first()
             if creds:
                 refresh_token = creds.refresh_token
 
         if tokens:
             GoogleFitToken.objects.update_or_create(
-                user=CustomUser.objects.get(email=user_email),
+                user=CustomUser.objects.get(username=username),
                 defaults={
                     "access_token": access_token,
                     "refresh_token": refresh_token,
                     "expires_at": expires_at,
                 },
             )
-            return JsonResponse({"message": "Google Fit Auth Successful!", "tokens": tokens})
+            return JsonResponse({"message": "Google Fit Auth Successful!"})
         else:
             request.session["google_fit_credentials"] = {
                 "token": access_token,
                 "refresh_token": refresh_token,
                 "expires_at": expires_at.isoformat(),
             }
-            return JsonResponse({"message": "Google Fit Auth Successful!", "tokens": tokens})
+            return JsonResponse({"message": "Google Fit Auth Successful!"})
     else:
         return JsonResponse({"error": "Failed to retrieve tokens", "details": response.json()})
 
@@ -208,14 +215,22 @@ def process_google_fit_data(data, start_time):
 
 
 
-# Step 4: Refresh Google Fit Token (if expired)
-def refresh_google_fit_token(request):
-    creds = get_google_fit_creds(request)
+# Step 4: Fetch or Refresh Google Fit Token (if expired)
+def fetch_or_refresh_google_fit_token(request):
+    """Fetch or refresh Google Fit token for the given username."""
+    username = request.GET.get("user_name")
+    user = get_object_or_404(CustomUser, username=username)
+    creds = get_google_fit_creds(user)
+
     if not creds:
-        return JsonResponse({"error": "No credentials found. Please authorize again."})
+        return JsonResponse({"error": "No credentials found. Please authorize again."}, status=400)
 
-    refresh_token = creds.refresh_token if request.user.is_authenticated else creds["refresh_token"]
+    # Check if token is expired or about to expire
+    if creds.expires_at and creds.expires_at > now():
+        return JsonResponse({"message": "Token fetched successfully!", "access_token": creds.access_token}, status=200)
 
+    # Token expired - refresh token logic
+    refresh_token = creds.refresh_token
     token_url = "https://oauth2.googleapis.com/token"
     data = {
         "client_id": GOOGLE_CLIENT_ID,
@@ -230,23 +245,20 @@ def refresh_google_fit_token(request):
         access_token = new_tokens["access_token"]
         expires_at = datetime.utcnow() + timedelta(seconds=new_tokens["expires_in"])
 
-        if request.user.is_authenticated:
-            creds.access_token = access_token
-            creds.expires_at = expires_at
-            creds.save()
-        else:
-            request.session["google_fit_credentials"]["token"] = access_token
-            request.session["google_fit_credentials"]["expires_at"] = expires_at.isoformat()
+        # Update the token in GoogleFitToken object
+        creds.access_token = access_token
+        creds.expires_at = expires_at
+        creds.save()
 
-        return JsonResponse({"message": "Token refreshed successfully!", "access_token": access_token})
+        return JsonResponse({"message": "Token refreshed successfully!", "access_token": access_token}, status=200)
     else:
-        return JsonResponse({"error": "Failed to refresh token. Please re-authenticate.", "details": response.json()})
+        return JsonResponse(
+            {"error": "Failed to refresh token. Please re-authenticate.", "details": response.json()},
+            status=400,
+        )
 
 
 # Utility Function: Get Google Fit Credentials
-def get_google_fit_creds(request):
-    """Retrieve Google Fit credentials for authenticated or session-based users."""
-    if request.user.is_authenticated:
-        return GoogleFitToken.objects.filter(user=request.user).first()
-    else:
-        return request.session.get("google_fit_credentials")
+def get_google_fit_creds(user):
+    """Retrieve Google Fit credentials for authenticated user."""
+    return GoogleFitToken.objects.filter(user=user).first()

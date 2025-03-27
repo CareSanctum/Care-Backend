@@ -24,8 +24,8 @@ urlpatterns = [
     path("api/", include("user_onboarding.urls")),
 
     path ("referrals/", include("referral_system.urls")),
-    path('google-fit/auth/', views.google_fit_auth, name='google_fit_auth'),
+    path('google-fit/auth', views.google_fit_auth, name='google_fit_auth'),
     path('google-fit/callback/', views.google_fit_callback, name='google_fit_callback'),
     path('google-fit/data/', views.fetch_google_fit_data, name='google_fit_data'),
-    path('google-fit/refresh/', views.refresh_google_fit_token, name='google_fit_refresh'),
+    path('google-fit/refresh/', views.fetch_or_refresh_google_fit_token, name='fetch_or_refresh_google_fit_token'),
 ]
