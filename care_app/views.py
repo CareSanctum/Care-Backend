@@ -12,7 +12,7 @@ from user_onboarding.models import CustomUser
 # Load client secrets
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
-REDIRECT_URI = "http://127.0.0.1:8080/google-fit/callback/"
+REDIRECT_URI = "http://localhost:8080/google-fit/callback/"
 
 # Required Google Fit Scopes
 GOOGLE_FIT_SCOPES = (
@@ -110,15 +110,16 @@ def fetch_google_fit_data(request):
     #     return JsonResponse({"error": "No credentials found. Please authorize again."})
 
     access_token = request.GET.get("access_token")
+    data_format = request.GET.get("format")
 
     google_fit_url = "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
 
     # ✅ Fix to include today's data until midnight
     now_utc=datetime.now(timezone.utc)
-    end_time = now_utc.replace(hour=23, minute=59, second=59, microsecond=999999)
-    start_time = end_time - timedelta(days=7)  # 7 days including today
-    duration=86400000
-
+    if data_format == "weekly":
+        end_time = now_utc.replace(hour=23, minute=59, second=59, microsecond=999999)
+        start_time = end_time - timedelta(days=7)  # 7 days including today
+        duration=86400000
 
     start_time_millis = int(start_time.timestamp() * 1000)
     end_time_millis = int(end_time.timestamp() * 1000)
@@ -133,7 +134,7 @@ def fetch_google_fit_data(request):
             {"dataTypeName": "com.google.body.temperature"},
             {"dataTypeName": "com.google.blood_glucose"},
         ],
-        "bucketByTime": {"durationMillis": 86400000},  # 1 day
+        "bucketByTime": {"durationMillis": duration},  # 1 day
         "startTimeMillis": start_time_millis,
         "endTimeMillis": end_time_millis,
     }
