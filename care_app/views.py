@@ -9,11 +9,13 @@ from user_onboarding.models import GoogleFitToken
 import urllib.parse
 from user_onboarding.models import CustomUser
 from django.utils.timezone import now
+import os
+from dotenv import load_dotenv
 
 # Load client secrets
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
-REDIRECT_URI = "http://localhost:8080/google-fit/callback/"
+REDIRECT_URI = os.getenv("REDIRECT_URI")
 
 # Required Google Fit Scopes
 GOOGLE_FIT_SCOPES = (
