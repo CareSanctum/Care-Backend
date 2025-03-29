@@ -1,4 +1,4 @@
-import requests
+
 import json
 from datetime import datetime, timedelta, timezone
 from django.shortcuts import get_object_or_404, redirect
@@ -109,7 +109,6 @@ def google_fit_callback(request):
         return JsonResponse({"error": "Failed to retrieve tokens", "details": response.json()})
 
 from datetime import datetime, timedelta
-import requests
 from django.http import JsonResponse
 
 # Step 3: Fetch Google Fit Data
