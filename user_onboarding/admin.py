@@ -108,6 +108,10 @@ class LabReportAdmin(admin.ModelAdmin):
     list_display = ("test_date", "test_name","LR_file_url")
     search_fields = ("user__username",)
 
+class GoogleTokenAdmin(admin.ModelAdmin):
+    list_display =("access_token", "refresh_token", "expires_at")
+    search_fields = ("user__username",)
+
 
 # Registering all models
 admin.site.register(CustomUser, CustomUserAdmin)
@@ -126,3 +130,4 @@ admin.site.register(CheckupSchedule, CheckupScheduleAdmin)
 admin.site.register(HealthStatusOverview, HealthStatusOverviewAdmin)
 admin.site.register(Prescription, PrescriptionAdmin)
 admin.site.register(LabReport, LabReportAdmin)
+admin.site.register(GoogleFitToken, GoogleTokenAdmin)

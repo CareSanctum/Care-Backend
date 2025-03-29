@@ -116,32 +116,40 @@ def fetch_google_fit_data(request):
     # if not creds:
     #     return JsonResponse({"error": "No credentials found. Please authorize again."})
 
-    access_token = request.GET.get("access_token")
+    username = request.GET.get("username")
     data_format = request.GET.get("format")
-
+    user = get_object_or_404(CustomUser, username=username)
+    token = get_object_or_404(GoogleFitToken, user=user)
+    access_token=token.access_token
     google_fit_url = "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
 
     # ✅ Fix to include today's data until midnight
-    now_utc=datetime.now(timezone.utc)
+    now_utc = datetime.now(timezone.utc)
+    
     if data_format == "weekly":
         end_time = now_utc.replace(hour=23, minute=59, second=59, microsecond=999999)
-        start_time = end_time - timedelta(days=7)  # 7 days including today
-        duration=86400000
-
+        start_time = end_time - timedelta(days=7)  # Past 7 days
+        duration = 86400000  # 1 day in milliseconds
+    
+    elif data_format == "hourly":
+        end_time = now_utc.replace(minute=59, second=59, microsecond=999999)
+        start_time = end_time - timedelta(hours=7)  # Past 7 hours
+        duration = 3600000  # 1 hour in milliseconds
+    
     start_time_millis = int(start_time.timestamp() * 1000)
     end_time_millis = int(end_time.timestamp() * 1000)
 
     request_body = {
         "aggregateBy": [
-            {"dataTypeName": "com.google.step_count.delta"},  # Steps
-            {"dataTypeName": "com.google.heart_rate.bpm"},   # Heart Rate
-            {"dataTypeName": "com.google.blood_pressure"},   # Blood Pressure
-            {"dataTypeName": "com.google.weight"},           # Weight
-            {"dataTypeName": "com.google.sleep.segment"},    # Sleep
+            {"dataTypeName": "com.google.step_count.delta"},  
+            {"dataTypeName": "com.google.heart_rate.bpm"},   
+            {"dataTypeName": "com.google.blood_pressure"},   
+            {"dataTypeName": "com.google.weight"},           
+            {"dataTypeName": "com.google.sleep.segment"},    
             {"dataTypeName": "com.google.body.temperature"},
             {"dataTypeName": "com.google.blood_glucose"},
         ],
-        "bucketByTime": {"durationMillis": duration},  # 1 day
+        "bucketByTime": {"durationMillis": duration},  
         "startTimeMillis": start_time_millis,
         "endTimeMillis": end_time_millis,
     }
@@ -153,26 +161,27 @@ def fetch_google_fit_data(request):
         return JsonResponse({"error": "Failed to fetch Google Fit data."})
 
     google_fit_data = response.json()
-    processed_data = process_google_fit_data(google_fit_data, start_time)
+    processed_data = process_google_fit_data(google_fit_data, data_format)
 
     return JsonResponse(processed_data, safe=False)
 
-
+import pytz
 # Step 4: Process Google Fit Data
-def process_google_fit_data(data, start_time):
+def process_google_fit_data(data, data_format):
     result = {}
+    local_tz = pytz.timezone("Asia/Kolkata")  # Convert UTC → GMT+5:30
 
     for i, bucket in enumerate(data.get("bucket", [])):
         start_time_millis = int(bucket["startTimeMillis"])
-        start_date = datetime.utcfromtimestamp(start_time_millis / 1000).strftime('%Y-%m-%d')
+        bucket_time = datetime.utcfromtimestamp(start_time_millis / 1000).replace(tzinfo=pytz.utc)
+        bucket_time = bucket_time.astimezone(local_tz)  # Convert to local timezone
 
-        # ⚡️ To use "day 1", "day 2", ..., uncomment this line
-        day_label = f"day {i + 1}"  
-        
-        # ⚡️ To use specific dates like "2025-03-16", uncomment this line
-        day_label = start_date  
+        if data_format == "weekly":
+            time_label = bucket_time.strftime("%Y-%m-%d")  # Format as date
+        elif data_format == "hourly":
+            time_label = bucket_time.strftime("%Y-%m-%d %H:%M")  # Format as date + hour
 
-        result[day_label] = {
+        result[time_label] = {
             "step_count": 0,
             "heart_rate": 0,
             "systolic": 0,
@@ -188,28 +197,28 @@ def process_google_fit_data(data, start_time):
                 value = point.get("value", [])[0]
 
                 if "com.google.step_count.delta" in dataset["dataSourceId"]:
-                    result[day_label]["step_count"] += value.get("intVal", 0)
+                    result[time_label]["step_count"] += value.get("intVal", 0)
 
                 elif "com.google.blood_glucose" in dataset["dataSourceId"]:
-                    result[day_label]["blood_glucose"] = value.get("fpVal", 0.0)
-                
+                    result[time_label]["blood_glucose"] = value.get("fpVal", 0.0)
+
                 elif "com.google.body.temperature" in dataset["dataSourceId"]:
-                    result[day_label]["body_temperature"] = value.get("fpVal", 0.0)
+                    result[time_label]["body_temperature"] = value.get("fpVal", 0.0)
 
                 elif "com.google.heart_rate.bpm" in dataset["dataSourceId"]:
-                    result[day_label]["heart_rate"] = value.get("fpVal", 0.0)
+                    result[time_label]["heart_rate"] = value.get("fpVal", 0.0)
 
                 elif "com.google.blood_pressure" in dataset["dataSourceId"]:
                     systolic = value.get("mapVal", [])[0].get("fpVal", 0.0) if value.get("mapVal") else 0.0
                     diastolic = value.get("mapVal", [])[1].get("fpVal", 0.0) if len(value.get("mapVal", [])) > 1 else 0.0
-                    result[day_label]["systolic"] = systolic
-                    result[day_label]["diastolic"] = diastolic
+                    result[time_label]["systolic"] = systolic
+                    result[time_label]["diastolic"] = diastolic
 
                 elif "com.google.weight" in dataset["dataSourceId"]:
-                    result[day_label]["weight"] = value.get("fpVal", 0.0)
+                    result[time_label]["weight"] = value.get("fpVal", 0.0)
 
                 elif "com.google.sleep.segment" in dataset["dataSourceId"]:
-                    result[day_label]["sleep_duration"] += value.get("intVal", 0)
+                    result[time_label]["sleep_duration"] += value.get("intVal", 0)
 
     return result
 
