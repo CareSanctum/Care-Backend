@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 import uuid
 from django.utils.timezone import now
+from django.utils import timezone
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, phone_number, email=None, password=None, role="USERS"):
@@ -276,3 +277,53 @@ class GoogleFitToken(models.Model):
     access_token = models.TextField()
     refresh_token = models.TextField()
     expires_at = models.DateTimeField()
+
+
+class UserDevice(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="devices")
+    name = models.CharField(max_length=50, help_text="User-defined device name (e.g., John's Watch)")
+    device_code = models.CharField(max_length=50, unique=True, help_text="Device ID (e.g., AK_00003)")
+
+    def __str__(self):
+        return f"{self.name} ({self.device_code})"
+
+
+
+from django.db import models
+from django.db.models import JSONField
+from django.utils import timezone
+
+
+class IngestionData(models.Model):
+    class Status(models.TextChoices):
+        PROCESSED = "PROCESSED"
+        FAILED = "FAILED"
+        PROCESSING = "PROCESSING"
+
+    source = models.CharField(max_length=50)
+    data = JSONField()
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    device = models.ForeignKey(UserDevice, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PROCESSING
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        related_name='vitals_created',
+        null=True,
+        blank=True
+    )
+    processing_time = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["device_id", "user_id"]),
+            models.Index(fields=["status"]),
+        ]
+        unique_together = ("device_id", "user_id", "created_at")
+
+    def save(self, *args, **kwargs):
+        self.identifier = f"{self.device_id}/{self.user_id}"
+        super().save(*args, **kwargs)
