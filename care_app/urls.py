@@ -17,9 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from care_app import views
+from user_onboarding.admin import custom_admin_site
+
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+ 
     
     path("api/", include("user_onboarding.urls")),
 
@@ -28,4 +30,6 @@ urlpatterns = [
     path('google-fit/callback/', views.google_fit_callback, name='google_fit_callback'),
     path('google-fit/data/', views.fetch_google_fit_data, name='google_fit_data'),
     path('google-fit/refresh/', views.fetch_or_refresh_google_fit_token, name='fetch_or_refresh_google_fit_token'),
+    path("admin/", custom_admin_site.urls),
+     
 ]

@@ -1,6 +1,5 @@
 from django.urls import path
 from .views import *
-from .admin import custom_admin_site
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
@@ -25,5 +24,4 @@ urlpatterns = [
     path("get-assigned-users/<str:care_manager_username>/",AssignedPatientsView.as_view() , name ="get_assigned_care_managers"),
     path("assign/", AssignRolesView.as_view(), name="assign"),
     path("create-admin/", create_admin_user, name="create-admin"),
-    path("admin/", custom_admin_site.urls),
 ]

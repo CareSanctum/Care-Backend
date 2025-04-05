@@ -13,7 +13,7 @@ class IngestionDataForm(forms.ModelForm):
     bp_systolic = forms.IntegerField(label='Blood Pressure Systolic', min_value=0)
     bp_diastolic = forms.IntegerField(label='Blood Pressure Diastolic', min_value=0)
     blood_oxygen = forms.DecimalField(label='Blood Oxygen (%)', min_value=0, max_value=100)
-    body_temperature = forms.DecimalField(label='Body Temperature (°C)', min_value=30, max_value=45)
+    body_temperature = forms.DecimalField(label='Body Temperature (°C)', min_value=30, max_value=100)
 
     class Meta:
         model = IngestionData
